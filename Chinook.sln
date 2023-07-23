@@ -10,6 +10,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution", "Solution", "{7A
 		README.md = README.md
 	EndProjectSection
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DataLayer", "DataLayer\DataLayer.csproj", "{3F5B25CA-CC0F-481C-8B41-1FBDB02EEEE0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceLayer", "ServiceLayer\ServiceLayer.csproj", "{B66734D7-5B6D-4836-B83A-F0808C220642}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -20,6 +24,14 @@ Global
 		{4F9CE74D-8572-40F8-B76E-3339126D1CCC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4F9CE74D-8572-40F8-B76E-3339126D1CCC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4F9CE74D-8572-40F8-B76E-3339126D1CCC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3F5B25CA-CC0F-481C-8B41-1FBDB02EEEE0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3F5B25CA-CC0F-481C-8B41-1FBDB02EEEE0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3F5B25CA-CC0F-481C-8B41-1FBDB02EEEE0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3F5B25CA-CC0F-481C-8B41-1FBDB02EEEE0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B66734D7-5B6D-4836-B83A-F0808C220642}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B66734D7-5B6D-4836-B83A-F0808C220642}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B66734D7-5B6D-4836-B83A-F0808C220642}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B66734D7-5B6D-4836-B83A-F0808C220642}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,5 +1,6 @@
 using Chinook;
 using Chinook.Areas.Identity;
+using Chinook.Managers;
 using Chinook.Models;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -17,6 +18,11 @@ builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 
 builder.Services.AddScoped<AuthenticationStateProvider, RevalidatingIdentityAuthenticationStateProvider<ChinookUser>>();
+
+//Registered separate managers to perform actions related to Artists, PlayLists and Tracks
+builder.Services.AddTransient<ArtistsManager>();
+builder.Services.AddTransient<TracksManager>();
+builder.Services.AddTransient<PlayListsManager>();
 
 var app = builder.Build();
 

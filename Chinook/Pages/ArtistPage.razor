@@ -3,6 +3,7 @@
 
 @using Chinook.Models
 @using Chinook.ClientModels
+@using Chinook.Managers;
 @using Microsoft.EntityFrameworkCore
 @using System.Security.Claims;
 
@@ -25,15 +26,15 @@
 else
 {
     <h1>@Artist.Name</h1>
-        <table class="table table-striped table-hover table-sm">
-            <thead>
-                <tr>
-                    <th>Album title</th>
-                    <th>Track name</th>
-                    <th></th>
+    <table class="table table-striped table-hover table-sm">
+        <thead>
+            <tr>
+                <th>Album title</th>
+                <th>Track name</th>
+                <th></th>
             </tr>
-            </thead>
-            <tbody>
+        </thead>
+        <tbody>
             @foreach (var track in Tracks)
             {
                 <tr>
@@ -52,42 +53,40 @@ else
                     </td>
                 </tr>
             }
-            </tbody>
-        </table>
+        </tbody>
+    </table>
 
 }
 
 @code {
     [Parameter] public long ArtistId { get; set; }
     [CascadingParameter] private Task<AuthenticationState> authenticationState { get; set; }
-    [Inject] IDbContextFactory<ChinookContext> DbFactory { get; set; }
     private Modal PlaylistDialog { get; set; }
+
+    @inject ArtistsManager artistsManager;//Injecting ArtistsManager to access the data retrival methods
+    @inject TracksManager tracksManager;//Injecting TracksManager to access the data retrival methods
+    @inject PlayListsManager playListManager;
 
     private Artist Artist;
     private List<PlaylistTrack> Tracks;
-    private DbContext DbContext;
     private PlaylistTrack SelectedTrack;
+    private List<UserPlaylist> UserPlayLists;
+    private UserPlaylist SelectedPlayList;
+
     private string InfoMessage;
     private string CurrentUserId;
+    private string AddedPlayListName = "";
+    private string ButtonStatus = "disabled";
+    private string PopUpInfoMessage = "Please select the play list or create a new one";
+    private string PopUpInfoMessageStatus = "show";
 
     protected override async Task OnInitializedAsync()
     {
         await InvokeAsync(StateHasChanged);
         CurrentUserId = await GetUserId();
-        var DbContext = await DbFactory.CreateDbContextAsync();
-
-        Artist = DbContext.Artists.SingleOrDefault(a => a.ArtistId == ArtistId);
-
-        Tracks = DbContext.Tracks.Where(a => a.Album.ArtistId == ArtistId)
-            .Include(a => a.Album)
-            .Select(t => new PlaylistTrack()
-                {
-                    AlbumTitle = (t.Album == null ? "-" : t.Album.Title),
-                    TrackId = t.TrackId,
-                    TrackName = t.Name,
-                    IsFavorite = t.Playlists.Where(p => p.UserPlaylists.Any(up => up.UserId == CurrentUserId && up.Playlist.Name == "Favorites")).Any()
-                })
-            .ToList();
+        Artist = (await artistsManager.GetArtists()).FirstOrDefault(a => a.ArtistId == ArtistId);
+        Tracks = tracksManager.GetTracks(ArtistId, CurrentUserId);
+        UserPlayLists = playListManager.GetPlayListsByUser(CurrentUserId);
     }
 
     private async Task<string> GetUserId()
@@ -100,12 +99,14 @@ else
     private void FavoriteTrack(long trackId)
     {
         var track = Tracks.FirstOrDefault(t => t.TrackId == trackId);
+        playListManager.AddToPlayList(CurrentUserId, Constants.FavouriteListId, trackId, true, true);
         InfoMessage = $"Track {track.ArtistName} - {track.AlbumTitle} - {track.TrackName} added to playlist Favorites.";
     }
 
     private void UnfavoriteTrack(long trackId)
     {
         var track = Tracks.FirstOrDefault(t => t.TrackId == trackId);
+        playListManager.AddToPlayList(CurrentUserId, Constants.FavouriteListId, trackId, true, false);
         InfoMessage = $"Track {track.ArtistName} - {track.AlbumTitle} - {track.TrackName} removed from playlist Favorites.";
     }
 
@@ -113,13 +114,65 @@ else
     {
         CloseInfoMessage();
         SelectedTrack = Tracks.FirstOrDefault(t => t.TrackId == trackId);
+
         PlaylistDialog.Open();
     }
 
+    /// <summary>
+    /// this method will use when an existing playlist is selected by user.
+    /// </summary>
+    /// <param name="e"></param>
+    private void OnSelectedPlayList(ChangeEventArgs e)
+    {
+        if (long.Parse(e.Value.ToString()) == 0)
+            SelectedPlayList = new UserPlaylist();
+
+        SelectedPlayList = UserPlayLists.FirstOrDefault(t => t.PlaylistId == long.Parse(e.Value.ToString()));
+        AddedPlayListName = "";
+
+        if (AddedPlayListName == "" && (SelectedPlayList == null || SelectedPlayList.PlaylistId == 0))
+        {
+            ButtonStatus = "disabled";
+            PopUpInfoMessageStatus = "show";
+
+        }
+        else
+        {
+            ButtonStatus = "enabled";
+            PopUpInfoMessageStatus = "hide";
+        }
+    }
+
+    /// <summary>
+    /// this method is use when a new play list is added by user
+    /// </summary>
+    /// <param name="e"></param>
+    private void OnNewPlaylistNameAdded(ChangeEventArgs e)
+    {
+        AddedPlayListName = e.Value.ToString();
+        SelectedPlayList = UserPlayLists.FirstOrDefault(t => t.PlaylistId == Constants.DefaultPlayListId);
+
+        if (AddedPlayListName != "")
+        {
+            ButtonStatus = "enabled";
+            PopUpInfoMessageStatus = "hide";
+        }
+        else
+        {
+            ButtonStatus = "disabled";
+            PopUpInfoMessageStatus = "show";
+        }
+
+    }
+
+    /// <summary>
+    /// this method is use to add or remove tracks to favourite list and add tracks to different lists
+    /// </summary>
     private void AddTrackToPlaylist()
     {
         CloseInfoMessage();
-        InfoMessage = $"Track {Artist.Name} - {SelectedTrack.AlbumTitle} - {SelectedTrack.TrackName} added to playlist {{playlist name}}.";
+        var selectedPlayListId = SelectedPlayList != null ? SelectedPlayList.PlaylistId : Constants.DefaultPlayListId;
+        playListManager.AddToPlayList(CurrentUserId, selectedPlayListId, SelectedTrack.TrackId, false, false, AddedPlayListName);
         PlaylistDialog.Close();
     }
 
@@ -127,8 +180,6 @@ else
     {
         InfoMessage = "";
     }
-
-
 }
 
 <Modal @ref="PlaylistDialog">
@@ -145,18 +196,27 @@ else
 
         <div class="form-group mb-2">
             <label for="ExistingPlaylist">Add to existing playlist</label>
-            <select class="form-control" id="ExistingPlaylist">
-                <option>Playlist 1</option>
-                <option>Playlist 2</option>
-                <option>Playlist 3</option>
+            <select class="form-control" id="ExistingPlaylist" @onchange="OnSelectedPlayList">
+                @foreach (var userPlayList in UserPlayLists)
+                {
+                    var selected = userPlayList.PlaylistId == Constants.DefaultPlayListId;
+                    <option id="@userPlayList.PlaylistId" value="@userPlayList.PlaylistId" selected="@selected">@userPlayList.Playlist.Name</option>
+                }
             </select>
         </div>
         <div class="form-group mb-2">
             <label for="NewPlaylist">Create new playlist</label>
-            <input type="text" id="NewPlaylist" class="form-control" placeholder="Name for the new playlist">
+            <input type="text" id="NewPlaylist" class="form-control" placeholder="Name for the new playlist" @oninput="OnNewPlaylistNameAdded">
+        </div>
+        <div class="alert alert-info fade @PopUpInfoMessageStatus">
+            <div class="d-flex align-items-start">
+                <div class="flex-grow-1">
+                    @PopUpInfoMessage
+                </div>
+            </div>
         </div>
     </Body>
     <Footer>
-        <button class="btn btn-success" @onclick="AddTrackToPlaylist">Save</button>
+        <button class="btn btn-success @ButtonStatus" @onclick="AddTrackToPlaylist">Save</button>
     </Footer>
 </Modal>
