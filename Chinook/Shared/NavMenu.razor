@@ -1,6 +1,8 @@
 ﻿@using Chinook.Managers;
 @using Chinook.Models;
 @using System.Security.Claims;
+
+@inject NavMenuManager navMenuManager;
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">Chinook</a>
@@ -51,6 +53,7 @@
         await InvokeAsync(StateHasChanged);
         CurrentUserId = await GetUserId();
         PlayLists = playlistManager.GetPlayListsByUser(CurrentUserId);
+        navMenuManager.OnMenuUpdated += OnMenuUpdated;
     }
 
     private async Task<string> GetUserId()
@@ -58,5 +61,24 @@
         var user = (await authenticationState).User;
         var userId = user.FindFirst(u => u.Type.Contains(ClaimTypes.NameIdentifier))?.Value;
         return userId;
+    }
+
+    /// <summary>
+    /// Unregister the event handler when the component is disposed
+    /// </summary>
+    /// <returns></returns>
+    public void Dispose()
+    {
+        navMenuManager.OnMenuUpdated -= OnMenuUpdated;
+    }
+
+    /// <summary>
+    /// Refresh the Nav menu when this event is triggered
+    /// </summary>
+    /// <returns></returns>
+    private async void OnMenuUpdated(object sender, EventArgs e)
+    {
+        PlayLists = playlistManager.GetPlayListsByUser(CurrentUserId);
+        StateHasChanged();
     }
 }

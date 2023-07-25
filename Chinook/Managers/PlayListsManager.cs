@@ -1,8 +1,10 @@
 ﻿using Chinook.ClientModels;
 using Chinook.Models;
+using Chinook.Pages;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualBasic;
+using System.Collections.Generic;
 
 namespace Chinook.Managers
 {
@@ -12,6 +14,7 @@ namespace Chinook.Managers
     public class PlayListsManager
     {
         private readonly ChinookContext _dbContext;
+        public event EventHandler OnMenuUpdated;
 
         /// <summary>
         /// Injecting the DB context object using DI - Constructor injection
@@ -36,7 +39,7 @@ namespace Chinook.Managers
                     ArtistName = t.Album.Artist.Name,
                     TrackId = t.TrackId,
                     TrackName = t.Name,
-                    IsFavorite = t.Playlists.Where(p => p.UserPlaylists.Any(up => up.UserId == currentUserId && up.Playlist.Name == "Favorites")).Any()
+                    IsFavorite = t.Playlists.Where(p => p.UserPlaylists.Any(up => up.UserId == currentUserId && up.Playlist.Name == Constants.FavouriteListName)).Any()
                 }).ToList()
             }).FirstOrDefault();
         }
@@ -51,7 +54,14 @@ namespace Chinook.Managers
         /// <param name="isFavourite"></param>
         public void AddToPlayList(string userId, long playListId, long trackId, bool addToFavouriteTracks = false, bool isFavourite = false, string playListName = "")
         {
-            if (playListId != Constants.FavouriteListId && !_dbContext.Playlists.Any(x => x.PlaylistId == playListId))
+            if(playListId == Constants.DefaultPlayListId)
+            {
+                var userList = _dbContext.UserPlaylists.Where(x => x.UserId == userId).Include(x => x.Playlist).OrderBy(x => x.PlaylistId).ToList();
+                var playListByName = userList.FirstOrDefault(x => x.Playlist.Name == playListName);
+                playListId = playListByName != null ? playListByName.PlaylistId : playListId;
+            }
+
+            if (!_dbContext.Playlists.Any(x => x.PlaylistId == playListId))
                 playListId = _dbContext.Playlists.Select(x => x.PlaylistId).Max() + 1;
 
             var model = CreatePlayListModel(userId, playListId, trackId, addToFavouriteTracks, isFavourite, playListName);
@@ -119,8 +129,14 @@ namespace Chinook.Managers
             }
             if (addToFavouriteTracks)
             {
-                model.Playlist.Name = Constants.FavouriteListName;
-                model.PlaylistId = Constants.FavouriteListId;
+                if (playListName == Constants.FavouriteListName)
+                {
+                    model.Playlist.Name = Constants.FavouriteListName;
+                    model.PlaylistId = listId;
+                }
+                else
+                    model.Playlist.Name = existingList.Playlist.Name;
+
                 if (isFavourite && existingList != null)
                 {
                     existingList.Playlist.Tracks.Add(track);
@@ -146,7 +162,7 @@ namespace Chinook.Managers
         }
 
         /// <summary>
-        /// Gets all user playslists - Based on user id
+        /// Get play list by logged in user.
         /// </summary>
         /// <param name="userId"></param>
         /// <returns></returns>
