@@ -23,6 +23,7 @@ builder.Services.AddScoped<AuthenticationStateProvider, RevalidatingIdentityAuth
 builder.Services.AddTransient<ArtistsManager>();
 builder.Services.AddTransient<TracksManager>();
 builder.Services.AddTransient<PlayListsManager>();
+builder.Services.AddScoped<NavMenuManager>();
 
 var app = builder.Build();
 

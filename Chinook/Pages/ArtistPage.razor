@@ -6,6 +6,7 @@
 @using Chinook.Managers;
 @using Microsoft.EntityFrameworkCore
 @using System.Security.Claims;
+@using System.Text.RegularExpressions;
 
 @if (!string.IsNullOrWhiteSpace(InfoMessage))
 {
@@ -65,7 +66,8 @@ else
 
     @inject ArtistsManager artistsManager;//Injecting ArtistsManager to access the data retrival methods
     @inject TracksManager tracksManager;//Injecting TracksManager to access the data retrival methods
-    @inject PlayListsManager playListManager;
+    @inject PlayListsManager playListManager;//Injecting PlayLisManager to access the data retrival methods
+    @inject NavMenuManager navMenuManager;//Injecting NavMenuManager to access the refresh menu methods
 
     private Artist Artist;
     private List<PlaylistTrack> Tracks;
@@ -77,8 +79,9 @@ else
     private string CurrentUserId;
     private string AddedPlayListName = "";
     private string ButtonStatus = "disabled";
-    private string PopUpInfoMessage = "Please select the play list or create a new one";
+    private string PopUpInfoMessage = "Please select the play list or create a unique play list";
     private string PopUpInfoMessageStatus = "show";
+    private ElementReference NewPlaylistRef;
 
     protected override async Task OnInitializedAsync()
     {
@@ -86,7 +89,7 @@ else
         CurrentUserId = await GetUserId();
         Artist = (await artistsManager.GetArtists()).FirstOrDefault(a => a.ArtistId == ArtistId);
         Tracks = tracksManager.GetTracks(ArtistId, CurrentUserId);
-        UserPlayLists = playListManager.GetPlayListsByUser(CurrentUserId);
+        UserPlayLists = playListManager.GetPlayListsByUser(CurrentUserId).Where(x => x.Playlist.Name != Constants.FavouriteListName).ToList();
     }
 
     private async Task<string> GetUserId()
@@ -99,14 +102,16 @@ else
     private void FavoriteTrack(long trackId)
     {
         var track = Tracks.FirstOrDefault(t => t.TrackId == trackId);
-        playListManager.AddToPlayList(CurrentUserId, Constants.FavouriteListId, trackId, true, true);
+        playListManager.AddToPlayList(CurrentUserId, Constants.DefaultPlayListId, trackId, true, true, Constants.FavouriteListName);
+        Tracks = tracksManager.GetTracks(ArtistId, CurrentUserId);
         InfoMessage = $"Track {track.ArtistName} - {track.AlbumTitle} - {track.TrackName} added to playlist Favorites.";
+        navMenuManager.GetUpdatedMenuByUser(CurrentUserId);
     }
 
     private void UnfavoriteTrack(long trackId)
     {
         var track = Tracks.FirstOrDefault(t => t.TrackId == trackId);
-        playListManager.AddToPlayList(CurrentUserId, Constants.FavouriteListId, trackId, true, false);
+        playListManager.AddToPlayList(CurrentUserId, Constants.DefaultPlayListId, trackId, true, false, Constants.FavouriteListName);
         InfoMessage = $"Track {track.ArtistName} - {track.AlbumTitle} - {track.TrackName} removed from playlist Favorites.";
     }
 
@@ -114,7 +119,6 @@ else
     {
         CloseInfoMessage();
         SelectedTrack = Tracks.FirstOrDefault(t => t.TrackId == trackId);
-
         PlaylistDialog.Open();
     }
 
@@ -154,8 +158,23 @@ else
 
         if (AddedPlayListName != "")
         {
-            ButtonStatus = "enabled";
-            PopUpInfoMessageStatus = "hide";
+            AddedPlayListName = Regex.Replace(AddedPlayListName, @"\s+", " ").Trim();
+            if (UserPlayLists.Any(x => x.Playlist.Name == AddedPlayListName))
+            {
+                ButtonStatus = "disabled";
+                PopUpInfoMessageStatus = "show";
+            }
+            else if (AddedPlayListName == Constants.FavouriteListName)
+            {
+                PopUpInfoMessage = "Play list name" + Constants.FavouriteListName + " is reserverd. Use a unique name.";
+                ButtonStatus = "disabled";
+                PopUpInfoMessageStatus = "show";
+            }
+            else
+            {
+                ButtonStatus = "enabled";
+                PopUpInfoMessageStatus = "hide";
+            }
         }
         else
         {
@@ -171,9 +190,21 @@ else
     private void AddTrackToPlaylist()
     {
         CloseInfoMessage();
-        var selectedPlayListId = SelectedPlayList != null ? SelectedPlayList.PlaylistId : Constants.DefaultPlayListId;
-        playListManager.AddToPlayList(CurrentUserId, selectedPlayListId, SelectedTrack.TrackId, false, false, AddedPlayListName);
-        PlaylistDialog.Close();
+        AddedPlayListName = Regex.Replace(AddedPlayListName, @"\s+", " ").Trim();
+        if (UserPlayLists.Any(x => x.Playlist.Name == AddedPlayListName))
+        {
+            ButtonStatus = "disabled";
+            PopUpInfoMessageStatus = "show";
+        }
+        else
+        {
+            var selectedPlayListId = SelectedPlayList != null ? SelectedPlayList.PlaylistId : Constants.DefaultPlayListId;
+            playListManager.AddToPlayList(CurrentUserId, selectedPlayListId, SelectedTrack.TrackId, false, false, AddedPlayListName);
+            PlaylistDialog.Close();
+            UserPlayLists = playListManager.GetPlayListsByUser(CurrentUserId).Where(x => x.Playlist.Name != Constants.FavouriteListName).ToList();
+            navMenuManager.GetUpdatedMenuByUser(CurrentUserId);
+        }
+        
     }
 
     private void CloseInfoMessage()

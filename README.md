@@ -18,7 +18,7 @@ Please put the code in Github. Please put the original code (our code) in the ma
 
 #Completion Note - Nishanthan
 1. Not very experienced in Blazor, but tried my best to learn something and did the project in the standard structure.
-2. Completed all 5 tasks except the page refresh part on the left NavBar menu on task 3.
+2. Completed all 5 tasks with the all possible validations.
 3. Followed the standard Blazor structure without going for Jquery or JavaScript based concept.
 4. Used Dipendency Injection as one of the design patterns.
 5. Separation of Concern, Single responsibility, Inversion of Control are used when writing the backend code.
