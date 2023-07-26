@@ -10,15 +10,17 @@ namespace Chinook.Managers
     {
         private readonly ChinookContext _dbContext;
         public event EventHandler OnMenuUpdated;
+        private readonly ILogger _logger;
 
 
         /// <summary>
         /// Injecting the DB context object using DI - Constructor injection
         /// </summary>
         /// <param name="dbContext"></param>
-        public NavMenuManager(ChinookContext dbContext)
+        public NavMenuManager(ChinookContext dbContext, ILogger<NavMenuManager> logger)
         {
             _dbContext = dbContext;
+            _logger = logger;
         }
 
 
@@ -27,16 +29,23 @@ namespace Chinook.Managers
         /// </summary>
         public void GetUpdatedMenuByUser(string userId)
         {
-            var list = _dbContext.UserPlaylists.Where(x => x.UserId == userId)
-                .Include(x => x.Playlist)
-                .ThenInclude(x => x.Tracks)
-                .OrderBy(x => x.PlaylistId)
-                .ToList();
+            try
+            {
+                var list = _dbContext.UserPlaylists.Where(x => x.UserId == userId)
+                                .Include(x => x.Playlist)
+                                .ThenInclude(x => x.Tracks)
+                                .OrderBy(x => x.PlaylistId)
+                                .ToList();
 
-            list.Add(AddDefaultPlayList());
-            list.OrderBy(x => x.PlaylistId).ToList();
+                list.Add(AddDefaultPlayList());
+                list.OrderBy(x => x.PlaylistId).ToList();
 
-            OnMenuUpdated?.Invoke(this, EventArgs.Empty);
+                OnMenuUpdated?.Invoke(this, EventArgs.Empty);
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex.Message, ex);
+            }
 
         }
 

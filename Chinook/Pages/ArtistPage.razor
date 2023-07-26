@@ -69,11 +69,11 @@ else
     @inject PlayListsManager playListManager;//Injecting PlayLisManager to access the data retrival methods
     @inject NavMenuManager navMenuManager;//Injecting NavMenuManager to access the refresh menu methods
 
-    private Artist Artist;
+    private ArtistModel Artist;
     private List<PlaylistTrack> Tracks;
     private PlaylistTrack SelectedTrack;
-    private List<UserPlaylist> UserPlayLists;
-    private UserPlaylist SelectedPlayList;
+    private List<UserPlaylistModel> UserPlayLists;
+    private UserPlaylistModel SelectedPlayList;
 
     private string InfoMessage;
     private string CurrentUserId;
@@ -90,6 +90,8 @@ else
         Artist = (await artistsManager.GetArtists()).FirstOrDefault(a => a.ArtistId == ArtistId);
         Tracks = tracksManager.GetTracks(ArtistId, CurrentUserId);
         UserPlayLists = playListManager.GetPlayListsByUser(CurrentUserId).Where(x => x.Playlist.Name != Constants.FavouriteListName).ToList();
+
+        var val = new List<AlbumModel>();
     }
 
     private async Task<string> GetUserId()
@@ -129,7 +131,7 @@ else
     private void OnSelectedPlayList(ChangeEventArgs e)
     {
         if (long.Parse(e.Value.ToString()) == 0)
-            SelectedPlayList = new UserPlaylist();
+            SelectedPlayList = new UserPlaylistModel();
 
         SelectedPlayList = UserPlayLists.FirstOrDefault(t => t.PlaylistId == long.Parse(e.Value.ToString()));
         AddedPlayListName = "";
