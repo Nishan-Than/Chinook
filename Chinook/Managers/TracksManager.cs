@@ -10,14 +10,16 @@ namespace Chinook.Managers
     public class TracksManager
     {
         private readonly ChinookContext _dbContext;
+        private readonly ILogger _logger;
 
         /// <summary>
         /// Injecting the db context using DI - Constructor injection
         /// </summary>
         /// <param name="dbContext"></param>
-        public TracksManager(ChinookContext dbContext)
+        public TracksManager(ChinookContext dbContext, ILogger<TracksManager> logger)
         {
             _dbContext = dbContext;
+            _logger = logger;
         }
 
         /// <summary>
@@ -25,9 +27,10 @@ namespace Chinook.Managers
         /// </summary>
         /// <param name="ArtistId"></param>
         /// <param name="CurrentUserId"></param>
-        /// <returns></returns>
+        /// <returns>PlaylistTrack client model is returing here</returns>
         public List<PlaylistTrack> GetTracks(long ArtistId, string CurrentUserId)
         {
+            //This method is not implemented with the async method becasue this method is calling under void methods on the razor views.
             try
             {
                 var tracks = _dbContext.Tracks;
@@ -44,8 +47,9 @@ namespace Chinook.Managers
             }
             catch (Exception ex)
             {
-                return new List<PlaylistTrack>();
+                _logger.LogError(ex.Message, ex);               
             }
+            return new List<PlaylistTrack>();
 
         }
     }

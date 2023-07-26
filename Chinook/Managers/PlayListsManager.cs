@@ -15,18 +15,27 @@ namespace Chinook.Managers
     {
         private readonly ChinookContext _dbContext;
         public event EventHandler OnMenuUpdated;
+        private readonly ILogger _logger;
 
         /// <summary>
         /// Injecting the DB context object using DI - Constructor injection
         /// </summary>
         /// <param name="dbContext"></param>
-        public PlayListsManager(ChinookContext dbContext)
+        public PlayListsManager(ChinookContext dbContext, ILogger<PlayListsManager> logger)
         {
             _dbContext = dbContext;
+            _logger = logger;
         }
 
+        /// <summary>
+        /// Get the Play lists by the logged in user and the playlist ID.
+        /// </summary>
+        /// <param name="currentUserId"></param>
+        /// <param name="playListId"></param>
+        /// <returns>Playlist client model is returing here</returns>
         public Playlist GetUserPlayList(string currentUserId, long playListId)
         {
+            //This method is not implemented with the async method becasue this method is calling under void methods on the razor views.
             return _dbContext.Playlists
             .Include(a => a.Tracks).ThenInclude(a => a.Album).ThenInclude(a => a.Artist)
             .Where(p => p.PlaylistId == playListId)
@@ -54,7 +63,8 @@ namespace Chinook.Managers
         /// <param name="isFavourite"></param>
         public void AddToPlayList(string userId, long playListId, long trackId, bool addToFavouriteTracks = false, bool isFavourite = false, string playListName = "")
         {
-            if(playListId == Constants.DefaultPlayListId)
+            //This method is not implemented with the async method becasue this method is calling under void methods on the razor views.
+            if (playListId == Constants.DefaultPlayListId)
             {
                 var userList = _dbContext.UserPlaylists.Where(x => x.UserId == userId).Include(x => x.Playlist).OrderBy(x => x.PlaylistId).ToList();
                 var playListByName = userList.FirstOrDefault(x => x.Playlist.Name == playListName);
@@ -93,7 +103,7 @@ namespace Chinook.Managers
             }
             catch (Exception ex)
             {
-                throw ex;
+                _logger.LogError(ex.Message, ex);
             }
 
         }
@@ -165,22 +175,28 @@ namespace Chinook.Managers
         /// Get play list by logged in user.
         /// </summary>
         /// <param name="userId"></param>
-        /// <returns></returns>
-        public List<UserPlaylist> GetPlayListsByUser(string userId)
+        /// <returns>UserPlaylistModel client model is returing here</returns>
+        public List<UserPlaylistModel> GetPlayListsByUser(string userId)
         {
+            //This method is not implemented with the async method becasue this method is calling under void methods on the razor views.
             var list = _dbContext.UserPlaylists.Where(x => x.UserId == userId)
                 .Include(x => x.Playlist)
                 .ThenInclude(x => x.Tracks)
-                .OrderBy(x => x.PlaylistId)
-                .ToList();
+                .OrderBy(x => x.PlaylistId).Select(x => new UserPlaylistModel()
+                {
+                    UserId = userId,
+                    PlaylistId = x.PlaylistId,
+                    User = x.User,
+                    Playlist = x.Playlist
+                }).ToList();
 
             list.Add(AddDefaultPlayList());
 
             return list.OrderBy(x => x.PlaylistId).ToList();
         }
-        private UserPlaylist AddDefaultPlayList()
+        private UserPlaylistModel AddDefaultPlayList()
         {
-            var defaultPlayList = new UserPlaylist();
+            var defaultPlayList = new UserPlaylistModel();
             defaultPlayList.Playlist = new PlaylistData();
             defaultPlayList.PlaylistId = Constants.DefaultPlayListId;
             defaultPlayList.Playlist.Name = Constants.DefaultPlayListName;
